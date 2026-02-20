@@ -1,0 +1,24 @@
+@startuml Data Flow Diagram - Будущее 2.0
+
+rectangle "Clinic" as clinic
+rectangle "Fintech" as fintech
+rectangle "AI Services" as ai
+rectangle "Pharma Partners" as pharma
+rectangle "Devices Partners" as devices
+rectangle "Data Platform" as dwh
+
+clinic -down-> dwh : Медицинские данные (анализы, визиты)
+dwh -down-> ai : Обогащённые датасеты для ML
+ai -up-> clinic : Результаты диагностики и прогнозы
+
+pharma -down-> dwh : Финансовые транзакции, счета
+dwh -up-> fintech : Финансовая аналитика, отчётность
+
+pharma -left-> dwh : Каталоги, заказы
+devices -left-> dwh : Потоки IoT-данных
+
+dwh -down-> ai : Объединённые данные для обучения моделей
+ai -up-> pharma : Рекомендации лекарств
+ai -up-> devices : Настройки устройств на основе анализа
+
+@enduml

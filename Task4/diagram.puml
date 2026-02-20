@@ -1,0 +1,26 @@
+@startuml Локальная автоматизация с Terraform и Docker
+title Локальная автоматизация с Terraform и Docker
+
+rectangle "Локальная машина" {
+  rectangle "Docker Engine" {
+    rectangle "Сеть project-env-net" as NET 
+    rectangle "Том project-env-db-data" as VOL 
+    rectangle "Контейнер: App Python HTTP" as APP 
+    rectangle "Контейнер: PostgreSQL postgres:15-alpine" as DB
+  }
+}
+
+rectangle "Terraform CLI" as TF #dceafc
+rectangle "Исходный код app/ + Dockerfile" as CODE #fff2cc 
+rectangle "CI/CD пайплайн" as CI #fff2cc 
+
+TF --> NET
+TF --> VOL
+TF --> APP
+TF --> DB
+
+CODE -down-> TF : terraform apply
+CI -right-> TF : plan/apply
+APP --> DB : Env: DB_HOST=db
+
+@enduml
