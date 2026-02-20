@@ -1,0 +1,63 @@
+@startuml Целевая архитектура
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "пользователь")
+Person(analytics, "Аналитик", "Аналитик или менеджер, формирующий отчёты")
+
+System_Boundary(platform, "Платформа данных «Будущее 2.0»") {
+    System_Boundary(self_managme, "Домен самообслуживания") {
+    Container(frontend, "Фронтенд", "React", "Интерфейс самообслуживания")
+    Container(backend, "Бэкенд", "Python", "Обработка бизнес-логики и взаимодействие с базами данных")
+    Container(apiGateway, "API-шлюз", "Kong", "Принимает запросы, применяет политики и маршрутизирует трафик")
+    Container(keycloak, "Keycloak", "IAM", "Аутентификация и авторизация пользователей, выдача токенов")
+    Container(cache, "Cache", "Redis")
+    ContainerDb(databases, "PostgreSQL")
+    }
+    Container(airflow, "Airflow", "Apache Airflow", "Планирует и выполняет пайплайны обработки данных")
+    ContainerQueue(kafka, "Kafka", "Потоковая шина для обмена событиями и CDC")
+    Container(bi, "BI-платформа", "Superset", "Публикует дашборды и визуализации на основе данных lakehouse")
+    System_Ext(ai, "Домен ИИ", "Сервисы ИИ для скорингов и рекомендаций")
+    System_Ext(fintech, "Домен финтех", "Платежи, транзакции, выписки")
+    System_Boundary(lakehouseBoundary, "Datalakehouse") {
+        Container(dremio, "Dremio", "Dremio", "Выполняет SQL-запросы и оптимизирует доступ к данным")
+        Container(nessie, "Nessie", "Nessie", "Управляет версиями и метаданными таблиц в lakehouse")
+        Container(minio, "Minio", "Minio", "Хранит сырые и обработанные данные в формате Parquet")
+    }
+    System_Boundary(legacy, "Легаси-ландшафт") {
+    Container(legacyDwh, "Корпоративный DWH", "SQL Server 2008", "Исторические витрины и отчёты из предыдущей системы")
+    Container(legacyBi, "Legacy BI", "Power BI / PowerBuilder", "Существующие отчёты и интерфейсы операторов")
+    Container(legacyBus, "Интеграционная шина", "Apache Camel ESB", "Оркестрация обмена данными между легаси-системами")
+    }
+}
+
+Rel(user, frontend, "Работает через веб-интерфейс", "HTTPS/SSO")
+Rel(frontend, keycloak, "Получает токен SSO", "OIDC")
+Rel(analytics, bi, "Использует дашборды и визуализации", "HTTPS/SSO")
+Rel(analytics,  legacyBi, "Использует дашборды и визуализации", "HTTPS/SSO")
+Rel(frontend, apiGateway, "Отправляет API-запросы", "HTTPS")
+Rel(apiGateway, keycloak, "Проверяет токен", "OAuth2")
+Rel(apiGateway, backend, "Маршрутизирует запросы", "REST")
+Rel(backend, cache, "Читает и обновляет результаты", "Redis")
+Rel(backend, databases, "Запрашивает данные", "SQL")
+Rel(backend, ai, "Запрашивает скоринг и рекомендации", "REST/gRPC")
+Rel(backend, kafka, "Публикует события и команды", "Kafka Producer")
+Rel(bi, dremio, "Читает витрины и модели", "SQL")
+Rel(airflow, kafka, "Читает события для пайплайнов", "Kafka Consumer")
+Rel(airflow, minio, "Сохраняет сырые и обработанные данные", "S3 API")
+Rel(airflow, nessie, "Регистрирует версии таблиц", "REST")
+Rel(airflow, dremio, "Регистрирует обновлённые датасеты", "SQL")
+Rel(airflow, databases, "Извлекает сырые данные", "ETL/CDC")
+Rel(airflow, legacyDwh, "Выгружает исторические данные", "ETL")
+Rel(kafka, ai, "Поставляет события для скоринга", "Kafka Topics")
+Rel(fintech, kafka, "Публикует финансовые события", "Kafka Topics")
+Rel(databases, kafka, "Передают CDC-события", "Kafka Connect")
+Rel(ai, minio, "Читает обучающие выборки", "S3 API")
+Rel(dremio, minio, "Читает колоночные файлы", "S3 API")
+Rel(dremio, nessie, "Использует метаданные и версии", "REST/GRPC")
+Rel(legacyDwh, legacyBus, "Публикует данные и события", "ETL/Batch")
+Rel(legacyBi, legacyBus, "Получает данные из DWH", "ETL")
+Rel(legacyBus, kafka, "Транслирует события в новую платформу", "Camel Routes")
+Rel(legacyBus, minio, "Выгружает исторические архивы", "S3 API")
+Rel(backend, legacyBus, "Использует данные, пока идёт миграция", "REST")
+
+@enduml
